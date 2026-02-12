@@ -31,10 +31,16 @@ canvas.height = 600;
 
 let score = 0;
 
+const playerImg = new Image();
+playerImg.src = "/static/player.png";
+
+const zombieImg = new Image();
+zombieImg.src = "/static/zombie.png";
+
 const player = {
     x: 400,
     y: 300,
-    size: 20,
+    size: 40,
     speed: 4
 };
 
@@ -68,7 +74,7 @@ function spawnZombie(){
     if(side===2){ x=Math.random()*800; y=0; }
     if(side===3){ x=Math.random()*800; y=600; }
 
-    zombies.push({x,y,size:25,speed:1.5});
+    zombies.push({x,y,size:50,speed:1.5});
 }
 
 function update(){
@@ -80,11 +86,14 @@ function update(){
     if(keys["a"]||keys["ArrowLeft"]) player.x -= player.speed;
     if(keys["d"]||keys["ArrowRight"]) player.x += player.speed;
 
-    // Draw Player
-    ctx.fillStyle="cyan";
-    ctx.beginPath();
-    ctx.arc(player.x,player.y,player.size,0,Math.PI*2);
-    ctx.fill();
+    // Draw Player Image
+    ctx.drawImage(
+        playerImg,
+        player.x - player.size/2,
+        player.y - player.size/2,
+        player.size,
+        player.size
+    );
 
     // Update bullets
     bullets.forEach((b,i)=>{
@@ -93,7 +102,7 @@ function update(){
 
         ctx.fillStyle="yellow";
         ctx.beginPath();
-        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
+        ctx.arc(b.x,b.y,5,0,Math.PI*2);
         ctx.fill();
 
         if(b.x<0||b.x>800||b.y<0||b.y>600){
@@ -107,14 +116,18 @@ function update(){
         z.x += Math.cos(angle)*z.speed;
         z.y += Math.sin(angle)*z.speed;
 
-        ctx.fillStyle="green";
-        ctx.beginPath();
-        ctx.arc(z.x,z.y,z.size,0,Math.PI*2);
-        ctx.fill();
+        // Draw Zombie Image
+        ctx.drawImage(
+            zombieImg,
+            z.x - z.size/2,
+            z.y - z.size/2,
+            z.size,
+            z.size
+        );
 
         // Collision player
         const distPlayer = Math.hypot(player.x - z.x, player.y - z.y);
-        if(distPlayer < player.size + z.size){
+        if(distPlayer < player.size/2 + z.size/2){
             alert("Game Over! Score: "+score);
             location.reload();
         }
@@ -122,7 +135,7 @@ function update(){
         // Collision bullet
         bullets.forEach((b,bi)=>{
             const dist = Math.hypot(b.x - z.x, b.y - z.y);
-            if(dist < b.size + z.size){
+            if(dist < 5 + z.size/2){
                 zombies.splice(zi,1);
                 bullets.splice(bi,1);
                 score++;
@@ -137,6 +150,6 @@ function update(){
 setInterval(spawnZombie, 1500);
 update();
 </script>
-
+    
 </body>
 </html>
