@@ -2,9 +2,10 @@
 <html>
 <head>
     <title>Zombie Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { margin:0; background:#111; overflow:hidden; }
-        canvas { display:block; margin:auto; background:#222; }
+        canvas { display:block; margin:auto; background:#222; touch-action:none; }
         #ui {
             position:absolute;
             top:10px;
@@ -26,21 +27,27 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 800;
-canvas.height = 600;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 let score = 0;
 
+// IMAGES
 const playerImg = new Image();
 playerImg.src = "/static/player.png";
 
 const zombieImg = new Image();
 zombieImg.src = "/static/zombie.png";
 
+// SOUNDS
+const shootSound = new Audio("/static/shoot.mp3");
+const zombieDieSound = new Audio("/static/zombie_die.mp3");
+
+// PLAYER
 const player = {
-    x: 400,
-    y: 300,
-    size: 40,
+    x: canvas.width/2,
+    y: canvas.height/2,
+    size: 50,
     speed: 4
 };
 
@@ -51,42 +58,61 @@ let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
+// SHOOT (PC)
 canvas.addEventListener("click", function(e){
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    shoot(e.clientX, e.clientY);
+});
 
-    const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+// SHOOT (MOBILE)
+canvas.addEventListener("touchstart", function(e){
+    e.preventDefault();
+    const touch = e.touches[0];
+    shoot(touch.clientX, touch.clientY);
+});
+
+function shoot(mouseX, mouseY){
+    const rect = canvas.getBoundingClientRect();
+    const x = mouseX - rect.left;
+    const y = mouseY - rect.top;
+
+    const angle = Math.atan2(y - player.y, x - player.x);
+
     bullets.push({
         x: player.x,
         y: player.y,
-        dx: Math.cos(angle)*6,
-        dy: Math.sin(angle)*6,
-        size:5
+        dx: Math.cos(angle)*7,
+        dy: Math.sin(angle)*7,
+        size:6
     });
-});
 
+    shootSound.currentTime = 0;
+    shootSound.play();
+}
+
+// SPAWN ZOMBIE
 function spawnZombie(){
     const side = Math.floor(Math.random()*4);
     let x,y;
-    if(side===0){ x=0; y=Math.random()*600; }
-    if(side===1){ x=800; y=Math.random()*600; }
-    if(side===2){ x=Math.random()*800; y=0; }
-    if(side===3){ x=Math.random()*800; y=600; }
 
-    zombies.push({x,y,size:50,speed:1.5});
+    if(side===0){ x=0; y=Math.random()*canvas.height; }
+    if(side===1){ x=canvas.width; y=Math.random()*canvas.height; }
+    if(side===2){ x=Math.random()*canvas.width; y=0; }
+    if(side===3){ x=Math.random()*canvas.width; y=canvas.height; }
+
+    zombies.push({x,y,size:60,speed:1.5});
 }
 
+// GAME LOOP
 function update(){
-    ctx.clearRect(0,0,800,600);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // Movement
+    // MOVEMENT (PC)
     if(keys["w"]||keys["ArrowUp"]) player.y -= player.speed;
     if(keys["s"]||keys["ArrowDown"]) player.y += player.speed;
     if(keys["a"]||keys["ArrowLeft"]) player.x -= player.speed;
     if(keys["d"]||keys["ArrowRight"]) player.x += player.speed;
 
-    // Draw Player Image
+    // DRAW PLAYER
     ctx.drawImage(
         playerImg,
         player.x - player.size/2,
@@ -95,28 +121,27 @@ function update(){
         player.size
     );
 
-    // Update bullets
+    // BULLETS
     bullets.forEach((b,i)=>{
         b.x += b.dx;
         b.y += b.dy;
 
         ctx.fillStyle="yellow";
         ctx.beginPath();
-        ctx.arc(b.x,b.y,5,0,Math.PI*2);
+        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
         ctx.fill();
 
-        if(b.x<0||b.x>800||b.y<0||b.y>600){
+        if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height){
             bullets.splice(i,1);
         }
     });
 
-    // Update zombies
+    // ZOMBIES
     zombies.forEach((z,zi)=>{
         const angle = Math.atan2(player.y - z.y, player.x - z.x);
         z.x += Math.cos(angle)*z.speed;
         z.y += Math.sin(angle)*z.speed;
 
-        // Draw Zombie Image
         ctx.drawImage(
             zombieImg,
             z.x - z.size/2,
@@ -125,19 +150,23 @@ function update(){
             z.size
         );
 
-        // Collision player
+        // Player Collision
         const distPlayer = Math.hypot(player.x - z.x, player.y - z.y);
         if(distPlayer < player.size/2 + z.size/2){
             alert("Game Over! Score: "+score);
             location.reload();
         }
 
-        // Collision bullet
+        // Bullet Collision
         bullets.forEach((b,bi)=>{
             const dist = Math.hypot(b.x - z.x, b.y - z.y);
-            if(dist < 5 + z.size/2){
+            if(dist < b.size + z.size/2){
                 zombies.splice(zi,1);
                 bullets.splice(bi,1);
+
+                zombieDieSound.currentTime = 0;
+                zombieDieSound.play();
+
                 score++;
                 document.getElementById("score").innerText = score;
             }
@@ -150,6 +179,6 @@ function update(){
 setInterval(spawnZombie, 1500);
 update();
 </script>
-    
+
 </body>
 </html>
